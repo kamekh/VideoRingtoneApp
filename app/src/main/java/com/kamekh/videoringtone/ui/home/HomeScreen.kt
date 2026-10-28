@@ -21,7 +21,10 @@ import androidx.compose.ui.unit.sp
 fun HomeScreen(
     onCreateRingtone: () -> Unit,
     onOpenMusic: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenLibrary: () -> Unit,
+    onOpenProfile: () -> Unit,
+    onOpenSecurity: () -> Unit
 ) {
     val gradient = Brush.verticalGradient(
         colors = listOf(
@@ -61,11 +64,35 @@ fun HomeScreen(
         }
 
         Button(
+            onClick = onOpenLibrary,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+            Text("Библиотека")
+        }
+
+        Button(
+            onClick = onOpenProfile,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+            Text("Профиль")
+        }
+
+        Button(
             onClick = onOpenSettings,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             Text("Настройки")
+        }
+
+        Button(
+            onClick = onOpenSecurity,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+            Text("Безопасность")
         }
     }
 }
