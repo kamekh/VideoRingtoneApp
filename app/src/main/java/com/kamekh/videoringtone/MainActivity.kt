@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,9 +37,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.activity.compose.rememberLauncherForActivityResult
 import com.kamekh.videoringtone.data.RingtoneRepository
 import com.kamekh.videoringtone.data.StoredRingtone
+import com.kamekh.videoringtone.model.RingtoneProfile
+import com.kamekh.videoringtone.ui.preview.PreviewScreen
 import com.kamekh.videoringtone.ui.theme.VideoRingtoneTheme
 
 class MainActivity : ComponentActivity() {
@@ -62,53 +62,34 @@ fun VideoRingtoneHomeScreen() {
     val repository = remember { RingtoneRepository(context.applicationContext) }
     val savedRingtones = remember { mutableStateListOf<StoredRingtone>() }
 
-    savedRingtones.clear()
-    savedRingtones.addAll(repository.load())
-
     var selectedVideoName by remember { mutableStateOf("Пока ничего не выбрано") }
     var selectedMusicName by remember { mutableStateOf("Без музыки") }
     var loopEnabled by remember { mutableStateOf(true) }
     var vibrateEnabled by remember { mutableStateOf(true) }
+    var showPreview by remember { mutableStateOf(false) }
+    var currentProfile by remember {
+        mutableStateOf(
+            RingtoneProfile(
+                title = "Мой рингтон",
+                videoUri = null,
+                musicUri = null,
+                loop = true,
+                vibrate = true
+            )
+        )
+    }
 
-    val videoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri ->
-            if (uri != null) {
-                selectedVideoName = uri.lastPathSegment ?: "Выбранное видео"
-                val ringtone = StoredRingtone(
-                    id = System.currentTimeMillis().toString(),
-                    title = selectedVideoName,
-                    videoUri = uri.toString(),
-                    musicUri = null,
-                    loop = loopEnabled,
-                    vibrate = vibrateEnabled
-                )
-                repository.saveRingtone(ringtone)
-                savedRingtones.clear()
-                savedRingtones.addAll(repository.load())
-            }
-        }
-    )
+    savedRingtones.clear()
+    savedRingtones.addAll(repository.load())
 
-    val musicPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri ->
-            if (uri != null) {
-                selectedMusicName = uri.lastPathSegment ?: "Выбранная музыка"
-                val ringtone = StoredRingtone(
-                    id = System.currentTimeMillis().toString(),
-                    title = selectedVideoName.takeIf { it != "Пока ничего не выбрано" } ?: "Мой рингтон",
-                    videoUri = null,
-                    musicUri = uri.toString(),
-                    loop = loopEnabled,
-                    vibrate = vibrateEnabled
-                )
-                repository.saveRingtone(ringtone)
-                savedRingtones.clear()
-                savedRingtones.addAll(repository.load())
-            }
-        }
-    )
+    if (showPreview) {
+        PreviewScreen(
+            profile = currentProfile,
+            onBack = { showPreview = false },
+            onApply = { showPreview = false }
+        )
+        return
+    }
 
     Box(
         modifier = Modifier
@@ -136,7 +117,7 @@ fun VideoRingtoneHomeScreen() {
             )
 
             Text(
-                text = "Выберите видео, музыку и установите красивый ringtone для входящего звонка.",
+                text = "Выберите видео, музыку и проверьте, как это будет выглядеть на входящем вызове.",
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
             )
@@ -156,7 +137,7 @@ fun VideoRingtoneHomeScreen() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Видео")
-                        Button(onClick = { videoPicker.launch("video/*") }) {
+                        Button(onClick = { selectedVideoName = "sample-video.mp4" }) {
                             Text("Выбрать")
                         }
                     }
@@ -167,7 +148,7 @@ fun VideoRingtoneHomeScreen() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Музыка")
-                        Button(onClick = { musicPicker.launch("audio/*") }) {
+                        Button(onClick = { selectedMusicName = "sample-audio.mp3" }) {
                             Text("Подобрать")
                         }
                     }
@@ -208,10 +189,26 @@ fun VideoRingtoneHomeScreen() {
 
                     Button(
                         onClick = {
+                            currentProfile = RingtoneProfile(
+                                title = selectedVideoName.takeIf { it != "Пока ничего не выбрано" } ?: "Мой рингтон",
+                                videoUri = if (selectedVideoName != "Пока ничего не выбрано") "video://selected" else null,
+                                musicUri = if (selectedMusicName != "Без музыки") "audio://selected" else null,
+                                loop = loopEnabled,
+                                vibrate = vibrateEnabled
+                            )
+                            showPreview = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("Предпросмотр")
+                    }
+
+                    Button(
+                        onClick = {
                             val ringtone = StoredRingtone(
                                 id = System.currentTimeMillis().toString(),
-                                title = selectedVideoName.takeIf { it != "Пока ничего не выбрано" }
-                                    ?: "Мой рингтон",
+                                title = selectedVideoName.takeIf { it != "Пока ничего не выбрано" } ?: "Мой рингтон",
                                 videoUri = if (selectedVideoName != "Пока ничего не выбрано") "video://selected" else null,
                                 musicUri = if (selectedMusicName != "Без музыки") "audio://selected" else null,
                                 loop = loopEnabled,
@@ -222,21 +219,9 @@ fun VideoRingtoneHomeScreen() {
                             savedRingtones.addAll(repository.load())
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                     ) {
                         Text("Сохранить рингтон")
-                    }
-
-                    Button(
-                        onClick = { },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary
-                        )
-                    ) {
-                        Text("Установить как ringtone")
                     }
                 }
             }
